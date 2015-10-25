@@ -3,8 +3,14 @@ from sys import argv
 class Prose:
     def __init__(self, location):
         self.text = []
+        replacements = {0x2014:"--",
+                        0x2018:"'",
+                        0x2019:"'",
+                        0x201c:'"',
+                        0x201d:'"'}
         with open(location, encoding='utf-8') as file:
             for line in file:
+                line = line.translate(replacements)
                 # Separate words and keep (but isolate) line endings
                 self.text += line.split() 
                 self.text.append('\n')
@@ -18,26 +24,36 @@ class Prose:
 
         result = ProseDiff()
         for word in self.text:
-            matched = False
-            if word == '\n':
+            try:
+                print("Looking for: {}".format(word))
+                matched = False
+                if word == '\n':
+                    for i in range(LOOKAHEAD):
+                        print(altered[altindex+i], end=', ')
+                        if altered[altindex+i] == '\n':
+                            result.push(' '.join(altered[altindex:altindex+i]), 'altered')
+                            result.push('', 'newline')
+                            altindex += i + 1
+                            matched = True
+                            print('MATCHED')
+                            break
+                    continue
                 for i in range(LOOKAHEAD):
-                    if altered[altindex+i] == '\n':
-                        result.push(altered[altindex:altindex+i], 'altered')
-                        result.push('', 'newline')
+                    print(altered[altindex+i], end=', ')
+                    if word == altered[altindex+i]:
+                        result.push(' '.join(altered[altindex:altindex+i]), 'altered')
+                        result.push(word, 'same')
                         altindex += i + 1
                         matched = True
+                        print('MATCHED')
                         break
-                continue
-            for i in range(LOOKAHEAD):
-                if word.lower() == altered[altindex+i].lower():
-                    result.push(altered[altindex:altindex+i], 'altered')
-                    result.push(word, 'same')
-                    altindex += i + 1
-                    mathced = True
-                    break
+            except IndexError:
+                matched = False
             if matched == False:
                 result.push(word, 'original')
+                print('NO MATCH')
                 continue
+        return result
 
 
 
@@ -52,7 +68,9 @@ class ProseDiff:
     def push(self, text, tag):
         if tag == 'newline':
             self.flush()
-            taggedtext.append( ('', 'newline') )
+            self.taggedtext.append( ('', 'newline') )
+        elif text == '':
+            return
         elif tag == 'same':
             if self.sametext == '':
                 self.flush()
@@ -67,24 +85,24 @@ class ProseDiff:
             
     def flush(self):
         if self.originaltext != '':
-            taggedtext.append( (self.originaltext.lstrip(), 'original') )
+            self.taggedtext.append( (self.originaltext.lstrip(), 'original') )
         if self.alteredtext != '':
-            taggedtext.append( (self.alteredtext.lstrip(), 'altered') )
+            self.taggedtext.append( (self.alteredtext.lstrip(), 'altered') )
         if self.sametext != '':
-            taggedtext.append( (self.sametext.lstrip(), 'same') )
+            self.taggedtext.append( (self.sametext.lstrip(), 'same') )
 
 
     def html(self):
         """Return an html file of the diff as a string."""
-        htmlhead = "../resources/htmlhead.html"
+        htmlhead = "resources/htmlhead.html"
         replacements = {'language' : 'en-US',
                         'encoding' : 'utf-8',
                         'title' : 'TwilightDiff'}
 
         with open(htmlhead, encoding='utf-8') as file:
             result = file.read()
-        for key, value in replacements:
-            result.replace('[['+key+']]', value)
+        for key in replacements:
+            result.replace('[['+key+']]', replacements[key])
 
         result += "\t<p>"
         for text, tag in self.taggedtext:
@@ -110,7 +128,7 @@ if __name__ == "__main__":
     # Load original and altered
     original = Prose(argv[1])
     altered = Prose(argv[2])
-    
+
     result = original.diff(altered)
 
     file = open('output.html', mode='w')
