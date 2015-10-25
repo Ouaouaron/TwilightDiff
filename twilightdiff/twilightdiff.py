@@ -8,6 +8,8 @@ class Prose:
                 # Separate words and keep (but isolate) line endings
                 self.text += line.split() 
                 self.text.append('\n')
+    def __getitem__(self, key):
+        return self.text[key]
 
     def diff(self, altered):
         taggedtext = []
@@ -18,7 +20,7 @@ class Prose:
         for word in self.text:
             matched = False
             if word == '\n':
-                for i in range(LOOKAHEAD)
+                for i in range(LOOKAHEAD):
                     if altered[altindex+i] == '\n':
                         result.push(altered[altindex:altindex+i], 'altered')
                         result.push('', 'newline')
@@ -47,7 +49,7 @@ class ProseDiff:
         self.alteredtext = ''
         self.sametext = ''
 
-    def push(text, tag):
+    def push(self, text, tag):
         if tag == 'newline':
             self.flush()
             taggedtext.append( ('', 'newline') )
@@ -63,7 +65,7 @@ class ProseDiff:
             raise TagError(tag, text)
 
             
-    def flush():
+    def flush(self):
         if self.originaltext != '':
             taggedtext.append( (self.originaltext.lstrip(), 'original') )
         if self.alteredtext != '':
@@ -79,7 +81,7 @@ class ProseDiff:
                         'encoding' : 'utf-8',
                         'title' : 'TwilightDiff'}
 
-        with open(htmlhead, encoding='utf-8') as file
+        with open(htmlhead, encoding='utf-8') as file:
             result = file.read()
         for key, value in replacements:
             result.replace('[['+key+']]', value)
